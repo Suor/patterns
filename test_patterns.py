@@ -2,40 +2,31 @@ import pytest
 from patterns import patterns
 
 
-global_var = 'global'
-
-def test_value():
-    local_var = 'local'
-
+def test_const():
     @patterns
-    def exact():
+    def const():
         if 1: 'int'
         if 'hi': 'str'
-        # if [1, 2]: 'list'
-        # if (1, 2): 'tuple'
-        if 'local': local_var
-        if 'global': global_var
+        if [1, 2]: 'list'
+        if (1, 2): 'tuple'
 
-    assert exact(1) == 'int'
-    assert exact('hi') == 'str'
-    # assert exact([1, 2]) == 'list'
-    # assert exact((1, 2)) == 'tuple'
-    # with pytest.raises(NotImplementedError): exact(2)
-    # with pytest.raises(NotImplementedError): exact(True)
-
-    # assert exact('local') == 'local'
-    assert exact('global') == 'global'
+    assert const(1) == 'int'
+    assert const('hi') == 'str'
+    assert const([1, 2]) == 'list'
+    assert const((1, 2)) == 'tuple'
+    # with pytest.raises(NotImplementedError): const(2)
+    # with pytest.raises(NotImplementedError): const(True)
 
 
-def test_global():
+def test_global_ref():
     @patterns
     def _global():
-        if '': test_global
+        if '': test_global_ref
 
-    assert _global('') is test_global
+    assert _global('') is test_global_ref
 
 
-def test_local():
+def test_local_ref():
     local_var = object()
 
     @patterns
