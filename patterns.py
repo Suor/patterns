@@ -21,12 +21,20 @@ def patterns(func):
     tree = _ast(func)
     print_ast(tree)
 
-    func_tree = tree.body[0]
-    func_tree.args.args.append(Name(ctx=Param(), id='value'))
-    func_tree.decorator_list = []
+    _transform_function(tree.body[0])
 
+    ast.fix_missing_locations(tree)
+
+    return _compile(func, tree)
+
+
+def _transform_function(func_tree):
     assert all(isinstance(t, ast.If) for t in func_tree.body), \
         'Patterns function should only have if statements'
+
+    # Adjust arglist and decorators
+    func_tree.args.args.append(Name(ctx=Param(), id='value'))
+    func_tree.decorator_list = []
 
     # Transform tests to pattern matching
     for test in func_tree.body:
@@ -38,9 +46,10 @@ def patterns(func):
         assert isinstance(test.body[0], Expr)
         test.body = [Return(value=test.body[0].value)]
 
-    ast.fix_missing_locations(tree)
     # print_ast(tree)
 
+
+def _compile(func, tree):
     code = compile(tree, sys.modules[func.__module__].__file__, 'exec')
     context = locals()#_locals(func)
     context.update(_locals(func))
