@@ -1,6 +1,6 @@
 import sys, inspect, ast, re
 from inspect import getargspec, ArgSpec, getsource
-from ast import Num, Str, Name, Param, Compare, Load, Eq, Return, Expr
+from ast import Num, Str, List, Tuple, Name, Param, Compare, Load, Eq, Return, Expr
 
 from meta.asttools import print_ast
 import dis
@@ -34,7 +34,7 @@ def patterns(func):
 
     # Transform tests to pattern matching
     for test in func_tree.body:
-        if isinstance(test.test, (Num, Str)):
+        if isinstance(test.test, (Num, Str, List, Tuple)):
             test.test = Compare(comparators=[test.test],
                                 left=Name(ctx=Load(), id='value'),
                                 ops=[Eq()])
