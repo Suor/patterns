@@ -1,11 +1,11 @@
 import sys, inspect, ast, re
 from inspect import getargspec, ArgSpec, getsource
+from ast import Num, Str, Name, Param, Compare, Load, Eq, Return, Expr
 
 from meta.asttools import print_ast
-from funcy import re_find
+import dis
+from funcy import re_find, zipdict
 
-
-from ast import Num, Str, Name, Param, Compare, Load, Eq, Return, Expr
 
 def patterns(func):
     empty_argspec = inspect.ArgSpec(args=[], varargs=None, keywords=None, defaults=None)
@@ -23,7 +23,7 @@ def patterns(func):
 
     # Parse source to AST
     tree = ast.parse(source)
-    # print_ast(tree)
+    print_ast(tree)
 
     func_tree = tree.body[0]
     func_tree.args.args.append(Name(ctx=Param(), id='value'))
@@ -53,12 +53,9 @@ def patterns(func):
     # exec code in context
     # context[func.__name__].__closure__ = func.__closure__
     # print context[func.__name__].__closure__
-    import dis
     dis.dis(context[func.__name__])
     return context[func.__name__]
 
-
-from funcy import zipdict
 
 def _locals(func):
     if func.__closure__:
