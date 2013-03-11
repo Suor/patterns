@@ -7,6 +7,13 @@ import dis
 from funcy import re_find, zipdict
 
 
+__all__ = ('Mismatch', 'patterns')
+
+
+class Mismatch(Exception):
+    pass
+
+
 def patterns(func):
     empty_argspec = inspect.ArgSpec(args=[], varargs=None, keywords=None, defaults=None)
     assert inspect.getargspec(func) == empty_argspec, 'Pattern function should not have arguments'

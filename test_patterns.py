@@ -1,5 +1,5 @@
 import pytest
-from patterns import patterns
+from patterns import *
 
 
 def test_const():
@@ -14,8 +14,8 @@ def test_const():
     assert const('hi') == 'str'
     assert const([1, 2]) == 'list'
     assert const((1, 2)) == 'tuple'
-    # with pytest.raises(NotImplementedError): const(2)
-    # with pytest.raises(NotImplementedError): const(True)
+    with pytest.raises(Mismatch): const(2)
+    with pytest.raises(Mismatch): const(True)
 
 
 def test_global_ref():
