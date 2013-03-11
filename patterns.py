@@ -18,18 +18,7 @@ def patterns(func):
     empty_argspec = inspect.ArgSpec(args=[], varargs=None, keywords=None, defaults=None)
     assert inspect.getargspec(func) == empty_argspec, 'Pattern function should not have arguments'
 
-    # Get function source
-    source = inspect.getsource(func)
-
-    # Fix extra indent if present
-    spaces = re_find(r'^\s+', source)
-    if spaces:
-        source = re.sub(r'(^|\n)' + spaces, '\n', source)
-
-    # print source
-
-    # Parse source to AST
-    tree = ast.parse(source)
+    tree = _ast(func)
     print_ast(tree)
 
     func_tree = tree.body[0]
@@ -64,10 +53,24 @@ def patterns(func):
     return context[func.__name__]
 
 
+def _ast(func):
+    return ast.parse(_source(func))
+
+def _source(func):
+    # Get function source
+    source = inspect.getsource(func)
+
+    # Fix extra indent if present
+    spaces = re_find(r'^\s+', source)
+    if spaces:
+        source = re.sub(r'(^|\n)' + spaces, '\n', source)
+
+    return source
+
+
 def _locals(func):
     if func.__closure__:
         names = func.__code__.co_freevars
-        print func.__closure__
         values = [cell.cell_contents for cell in func.__closure__]
         return zipdict(names, values)
     else:
