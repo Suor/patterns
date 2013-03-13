@@ -1,6 +1,6 @@
 import sys, inspect, ast, re
 from inspect import getargspec, ArgSpec, getsource
-from ast import Num, Str, List, Tuple, Name, Param, Compare, Load, Eq, Return, Expr
+from ast import *
 
 from meta.asttools import print_ast
 import dis
@@ -18,17 +18,12 @@ def patterns(func):
     empty_argspec = inspect.ArgSpec(args=[], varargs=None, keywords=None, defaults=None)
     assert inspect.getargspec(func) == empty_argspec, 'Pattern function should not have arguments'
 
-    tree = _ast(func)
-    print_ast(tree)
-
-    _transform_function(tree.body[0])
-
-    ast.fix_missing_locations(tree)
-
-    return _compile(func, tree)
+    tree = get_ast(func)
+    transform_function(tree.body[0])
+    return compile_func(func, tree)
 
 
-def _transform_function(func_tree):
+def transform_function(func_tree):
     assert all(isinstance(t, ast.If) for t in func_tree.body), \
         'Patterns function should only have if statements'
 
@@ -49,23 +44,37 @@ def _transform_function(func_tree):
     # print_ast(tree)
 
 
-def _compile(func, tree):
-    code = compile(tree, sys.modules[func.__module__].__file__, 'exec')
-    context = locals()#_locals(func)
-    context.update(_locals(func))
-    print context
-    exec code in func.__globals__, context
-    # exec code in context
-    # context[func.__name__].__closure__ = func.__closure__
-    # print context[func.__name__].__closure__
-    dis.dis(context[func.__name__])
-    return context[func.__name__]
+def compile_func(func, tree):
+    def _compile_func():
+        ast.fix_missing_locations(tree)
+        code = compile(tree, func_file(func), 'single')
+        exec code in func.__globals__, context
+
+    def wrap_func(func_tree, arg_names):
+        args = [Name(ctx=Param(), id=name) for name in arg_names]
+        return FunctionDef(
+            name = func_tree.name + '__wrapped',
+            args = arguments(args=args, defaults=[], vararg=None, kwarg=None),
+            decorator_list = [],
+             body = [
+                func_tree,
+                Return(value=Name(ctx=Load(), id=func_tree.name))
+            ]
+        )
+
+    context = sys._getframe(2).f_locals
+    if func.__closure__:
+        kwargs = context.copy()
+        tree.body[0] = wrap_func(tree.body[0], kwargs.keys())
+        _compile_func()
+        func.__code__ = context[func.__name__ + '__wrapped'](**kwargs).__code__
+        return func
+    else:
+        _compile_func()
+        return context[func.__name__]
 
 
-def _ast(func):
-    return ast.parse(_source(func))
-
-def _source(func):
+def get_ast(func):
     # Get function source
     source = inspect.getsource(func)
 
@@ -74,13 +83,8 @@ def _source(func):
     if spaces:
         source = re.sub(r'(^|\n)' + spaces, '\n', source)
 
-    return source
+    return ast.parse(source, func_file(func), 'single')
 
 
-def _locals(func):
-    if func.__closure__:
-        names = func.__code__.co_freevars
-        values = [cell.cell_contents for cell in func.__closure__]
-        return zipdict(names, values)
-    else:
-        return {}
+def func_file(func):
+    return sys.modules[func.__module__].__file__
