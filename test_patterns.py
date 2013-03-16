@@ -79,3 +79,17 @@ def test_destruct_tuple():
     assert destruct((2, 1)) == 2
     assert destruct((2, 2)) == 4
 
+
+def test_factorial():
+    @patterns
+    def factorial():
+        if 0: 1
+        if n is int: n * factorial(n-1)
+        if []: []
+        if [x] + xs: [factorial(x)] + factorial(xs)
+        if {'n': n, 'f': f}: f(factorial(n))
+
+    assert factorial(0) == 1
+    assert factorial(5) == 120
+    assert factorial([3,4,2]) == [6, 24, 2]
+    assert factorial({'n': [5, 1], 'f': sum}) == 121
