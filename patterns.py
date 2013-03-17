@@ -96,14 +96,28 @@ def transform_function(func_tree):
                                                   ops=[Eq()])],
                                 'assigns': []}
             build_tuple_destruct_ast(tests_and_assign, cond, [])
+
+
+            # Wrap if statment with
+            # try:
+            #   if_statment
+            # except TypeError:
+            #   pass
+            realtest = copy.copy(test)
+            func_tree.body[func_tree.body.index(test)] = TryExcept(body=[realtest],
+                                                                   handlers=[ExceptHandler(body=[Pass()],
+                                                                                           name=None,
+                                                                                           type=Name(ctx=Load(),
+                                                                                                     id='TypeError'))],
+                                                                   orelse=[])
             if len(tests_and_assign['tests']) == 1:
-                test.test = tests_and_assign['tests'][0]
+                realtest.test = tests_and_assign['tests'][0]
             else:
                 #For multiple tests use And operator
-                test.test = BoolOp(op=And(), values=tests_and_assign['tests'])
+                realtest.test = BoolOp(op=And(), values=tests_and_assign['tests'])
 
-            tests_and_assign['assigns'].append(get_final_operator(test.body[0]))
-            test.body = tests_and_assign['assigns']
+            tests_and_assign['assigns'].append(get_final_operator(realtest.body[0]))
+            realtest.body = tests_and_assign['assigns']
 
         elif isinstance(cond, (Num, Str, List, Tuple)):
             test.test = Compare(comparators=[cond],
