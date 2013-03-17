@@ -1,7 +1,7 @@
 import sys, inspect, ast, re
 from inspect import getargspec, ArgSpec, getsource
 from ast import *
-
+import copy
 from meta.asttools import print_ast
 import dis
 from funcy import re_find, zipdict
@@ -27,15 +27,48 @@ def patterns(func):
 
 
 def transform_function(func_tree):
+    def get_final_operator(expr):
+        if isinstance(expr, Expr):
+            return Return(value=expr.value)
+        if isinstance(expr, Raise):
+            return expr
+
     def has_vars(expr):
         if isinstance(expr, Expr):
             return has_vars(expr.value)
         elif isinstance(expr, Tuple):
             return any(has_vars(el) for el in expr.elts)
-        elif isinstance(expr,Name):
+        elif isinstance(expr, Name):
             return True
         else:
             return False
+
+    def build_tuple_destruct_ast(result, expr, indexes):
+        def build_subscript_for_index(indexes):
+            if len(indexes) == 0:
+                return Name(ctx=Load(), id='value')
+            index = indexes.pop()
+            return Subscript(ctx=Load(), slice=Index(value=Num(n=index)),
+                             value=build_subscript_for_index(indexes))
+
+        if isinstance(expr, Expr):
+            build_tuple_destruct_ast(result, expr, indexes)
+        elif isinstance(expr, Name):
+            result['assigns'].append(Assign(targets=[Name(ctx=Store(), id=expr.id)],
+                                            value=build_subscript_for_index(copy.copy(indexes))))
+        elif isinstance(expr, (Num, Str)):
+            result['tests'].append(Compare(comparators=[expr],
+                                           left=build_subscript_for_index(copy.copy(indexes)),
+                                           ops=[Eq()]))
+        elif isinstance(expr, Tuple):
+            # TODO refactor
+            jndex = 0
+            for el in expr.elts:
+                new_indexes = []
+                new_indexes.extend(indexes)
+                new_indexes.append(jndex)
+                build_tuple_destruct_ast(result, el, new_indexes)
+                jndex += 1
 
     assert all(isinstance(t, ast.If) for t in func_tree.body), \
         'Patterns function should only have if statements'
@@ -54,13 +87,29 @@ def transform_function(func_tree):
         cond = test.test
 
         if isinstance(cond, Tuple) and has_vars(cond):
-            assert
+            #TODO tuple length check
+            tests_and_assign = {'tests': [],
+                                'assigns': []}
+            build_tuple_destruct_ast(tests_and_assign, cond, [])
+            if len(tests_and_assign['tests']) > 0:
+                if len(tests_and_assign['tests']) == 1:
+                    test.test = tests_and_assign['tests'][0]
+                else:
+                    #For multiple tests use And operator
+                    test.test = BoolOp(op=And(), values=tests_and_assign['tests'])
+            else:
+                #there is no tests always true
+                test.test = Name(ctx=Load(),
+                                 id='True')
 
-        if isinstance(cond, (Num, Str, List, Tuple)):
+            tests_and_assign['assigns'].append(get_final_operator(test.body[0]))
+            test.body = tests_and_assign['assigns']
+
+        elif isinstance(cond, (Num, Str, List, Tuple)):
             test.test = Compare(comparators=[cond],
                                 left=Name(ctx=Load(), id='value'),
                                 ops=[Eq()])
-            test.body = [Return(value=test.body[0].value)]
+            test.body = [get_final_operator(test.body[0])]
 
         elif isinstance(cond, Name):
             var_name = cond.id
@@ -68,7 +117,7 @@ def transform_function(func_tree):
                                id='True')
             test.body = [Assign(targets=[Name(ctx=Store(), id=var_name)],
                                 value=Name(ctx=Load(), id='value')),
-                         Return(value=test.body[0].value)]
+                         get_final_operator(test.body[0])]
 
         elif isinstance(cond, Compare) and isinstance(cond.ops[0], Is):
             assert len(cond.ops) == 1
@@ -84,14 +133,14 @@ def transform_function(func_tree):
             test.body = [
                 Assign(targets=[Name(ctx=Store(), id=var_name)],
                        value=Name(ctx=Load(), id='value')),
-                Return(value=test.body[0].value)
+                get_final_operator(test.body[0])
             ]
 
     func_tree.body.append(Raise(inst=None,
                                 tback=None,
                                 type=Name(ctx=Load(),
                                           id='Mismatch')))
-    # print_ast(func_tree)
+    print_ast(func_tree)
 
 
 def compile_func(func, tree):
