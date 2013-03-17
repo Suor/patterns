@@ -1,5 +1,5 @@
 import pytest
-from patterns import patterns
+from patterns import patterns, Mismatch
 
 
 def test_const():
@@ -69,15 +69,19 @@ def test_destruct_tuple():
     assert destruct((2, 1)) == 2
     assert destruct((2, 2)) == 4
     assert destruct((5, 5)) == 25
-    with pytest.raises(ValueError): destruct(2)
+    with pytest.raises(ValueError): destruct((2,))
+    with pytest.raises(Mismatch): destruct(1)
 
-def test_inserted_destruct_tuple():
+
+def test_inserted_tuple():
     @patterns
     def destruct():
+        if (((1,1),2,3), (1,2,3), x): x
         if (1, (1,2)): 3
         if (x, (1,(y))): x + y
         if ((1,2,3), (1,2,3), x): x
 
+    assert destruct((((1,1),2,3), (1,2,3), (1,2))) == (1,2)
     assert destruct((1, (1,2))) == 3
     assert destruct((11, (1,(11)))) == 22
     assert destruct(((1,2,3), (1,2,3),(1,2,(1,10)))) == (1,2,(1,10))

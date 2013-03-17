@@ -87,20 +87,20 @@ def transform_function(func_tree):
         cond = test.test
 
         if isinstance(cond, Tuple) and has_vars(cond):
-            #TODO tuple length check
-            tests_and_assign = {'tests': [],
+            tests_and_assign = {'tests': [Compare(comparators=[Call(args=[Name(ctx=Load(), id='value')],
+                                                                    func=Name(ctx=Load(), id='len'),
+                                                                    keywords=[],
+                                                                    kwargs=None,
+                                                                    starargs=None)],
+                                                  left=Num(n=len(cond.elts)),
+                                                  ops=[Eq()])],
                                 'assigns': []}
             build_tuple_destruct_ast(tests_and_assign, cond, [])
-            if len(tests_and_assign['tests']) > 0:
-                if len(tests_and_assign['tests']) == 1:
-                    test.test = tests_and_assign['tests'][0]
-                else:
-                    #For multiple tests use And operator
-                    test.test = BoolOp(op=And(), values=tests_and_assign['tests'])
+            if len(tests_and_assign['tests']) == 1:
+                test.test = tests_and_assign['tests'][0]
             else:
-                #there is no tests always true
-                test.test = Name(ctx=Load(),
-                                 id='True')
+                #For multiple tests use And operator
+                test.test = BoolOp(op=And(), values=tests_and_assign['tests'])
 
             tests_and_assign['assigns'].append(get_final_operator(test.body[0]))
             test.body = tests_and_assign['assigns']
