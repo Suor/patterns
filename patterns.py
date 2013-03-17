@@ -27,22 +27,27 @@ def patterns(func):
 
 
 def transform_function(func_tree):
+    # R: No point in having this function, it's not hiding complexity
+    #    Besides it's inconsistent - one function for two diffrent puporses
     def get_final_operator(expr):
         if isinstance(expr, Expr):
             return Return(value=expr.value)
+        # R: elif would be better style
         if isinstance(expr, Raise):
             return expr
+        # R: No else fallback, asking for trouble,
+        #    doesn't really matter since function should be trashed anyway )
 
     def has_vars(expr):
         if isinstance(expr, Expr):
             return has_vars(expr.value)
         elif isinstance(expr, Tuple):
             return any(has_vars(el) for el in expr.elts)
-        elif isinstance(expr, Name):
-            return True
         else:
-            return False
+            return isinstance(expr, Name)
 
+    # R: strange function with mutable (!!!) arguments, just asking for trouble again,
+    #    really should be rewritten completely as pure function.
     def build_tuple_destruct_ast(result, expr, indexes):
         def build_subscript_for_index(indexes):
             if len(indexes) == 0:
@@ -52,6 +57,7 @@ def transform_function(func_tree):
                              value=build_subscript_for_index(indexes))
 
         if isinstance(expr, Expr):
+            # R: Going for stack overflow, luckily there can't be Exprs in If tests
             build_tuple_destruct_ast(result, expr, indexes)
         elif isinstance(expr, Name):
             result['assigns'].append(Assign(targets=[Name(ctx=Store(), id=expr.id)],
@@ -61,8 +67,8 @@ def transform_function(func_tree):
                                            left=build_subscript_for_index(copy.copy(indexes)),
                                            ops=[Eq()]))
         elif isinstance(expr, Tuple):
-            # TODO refactor
-            jndex = 0
+            # TODO: refactor
+            jndex = 0 # R: jndex?
             for el in expr.elts:
                 new_indexes = []
                 new_indexes.extend(indexes)
@@ -87,6 +93,12 @@ def transform_function(func_tree):
         cond = test.test
 
         if isinstance(cond, Tuple) and has_vars(cond):
+            # R: lines too long, logic unclear:
+            #    constructing some half-backed result and then mutating it with a function
+            # R: should also test if value is a tuple
+            # R: use helper for making calls, like make_call('len', 'value')
+            # R: also len variable could be overwritten in function def scope,
+            #    need to handle that
             tests_and_assign = {'tests': [Compare(comparators=[Call(args=[Name(ctx=Load(), id='value')],
                                                                     func=Name(ctx=Load(), id='len'),
                                                                     keywords=[],
@@ -104,6 +116,9 @@ def transform_function(func_tree):
             # except TypeError:
             #   pass
             realtest = copy.copy(test)
+            # R: should not alter elements list we iterate.
+            #    Should not wrap arbitrary (library user supplied code) with try ... except.
+            #    This will lead to unwanted exception capturing.
             func_tree.body[func_tree.body.index(test)] = TryExcept(body=[realtest],
                                                                    handlers=[ExceptHandler(body=[Pass()],
                                                                                            name=None,
@@ -159,6 +174,7 @@ def transform_function(func_tree):
 
 def compile_func(func, tree):
     def _compile_func():
+        # TODO: this one doesn't work quite well, handle it
         ast.fix_missing_locations(tree)
         code = compile(tree, func_file(func), 'single')
         exec code in func.__globals__, context
@@ -169,7 +185,7 @@ def compile_func(func, tree):
             name = func_tree.name + '__wrapped',
             args = arguments(args=args, defaults=[], vararg=None, kwarg=None),
             decorator_list = [],
-             body = [
+            body = [
                 func_tree,
                 Return(value=Name(ctx=Load(), id=func_tree.name))
             ]

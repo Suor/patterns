@@ -78,15 +78,24 @@ def test_inserted_tuple():
     def destruct():
         if (((1,1),2,3), (1,2,3), x): x
         if (1, (1,2)): 3
-        if (x, (1,(y))): x + y
+        if (x, (1,(y))): x + y # R: (y) - not a tuple
         if ((1,2,3), (1,2,3), x): x
 
     assert destruct((((1,1),2,3), (1,2,3), (1,2))) == (1,2)
     assert destruct((1, (1,2))) == 3
     assert destruct((11, (1,(11)))) == 22
     assert destruct(((1,2,3), (1,2,3),(1,2,(1,10)))) == (1,2,(1,10))
-#
-#
+
+
+def test_swallow():
+    @patterns
+    def swallow():
+        if (1, x): 1 + '1'
+
+    # R: will mismatch here instead of TypeError
+    with pytest.raises(TypeError): swallow((1, 2))
+
+
 # def test_factorial():
 #     @patterns
 #     def factorial():
