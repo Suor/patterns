@@ -1,5 +1,5 @@
 import pytest
-from patterns import patterns
+from patterns import patterns, Mismatch
 
 
 def test_const():
@@ -65,31 +65,38 @@ def test_destruct_tuple():
         if (x, y): x + destruct((x, y - 1))
         if (_,): raise ValueError('Give me pair')
 
-    def _destruct(value):
-        # if (x, 0): 0
-        if isinstance(value, tuple) and len(value) == 2 and value[1] == 0:
-            x = value[0]
-
-        if (x, 1): x
-        if (x, y): x + destruct((x, y - 1))
-        if (_,): raise ValueError('Give me pair')
-
-
     assert destruct((2, 0)) == 0
     assert destruct((2, 1)) == 2
     assert destruct((2, 2)) == 4
+    assert destruct((5, 5)) == 25
+    with pytest.raises(ValueError): destruct((2,))
+    with pytest.raises(Mismatch): destruct(1)
 
 
-def test_factorial():
+def test_inserted_tuple():
     @patterns
-    def factorial():
-        if 0: 1
-        if n is int: n * factorial(n-1)
-        if []: []
-        if [x] + xs: [factorial(x)] + factorial(xs)
-        if {'n': n, 'f': f}: f(factorial(n))
+    def destruct():
+        if (((1,1),2,3), (1,2,3), x): x
+        if (1, (1,2)): 3
+        if (x, (1,(y))): x + y
+        if ((1,2,3), (1,2,3), x): x
 
-    assert factorial(0) == 1
-    assert factorial(5) == 120
-    assert factorial([3,4,2]) == [6, 24, 2]
-    assert factorial({'n': [5, 1], 'f': sum}) == 121
+    assert destruct((((1,1),2,3), (1,2,3), (1,2))) == (1,2)
+    assert destruct((1, (1,2))) == 3
+    assert destruct((11, (1,(11)))) == 22
+    assert destruct(((1,2,3), (1,2,3),(1,2,(1,10)))) == (1,2,(1,10))
+#
+#
+# def test_factorial():
+#     @patterns
+#     def factorial():
+#         if 0: 1
+#         if n is int: n * factorial(n-1)
+#         if []: []
+#         if [x] + xs: [factorial(x)] + factorial(xs)
+#         if {'n': n, 'f': f}: f(factorial(n))
+#
+#     assert factorial(0) == 1
+#     assert factorial(5) == 120
+#     assert factorial([3,4,2]) == [6, 24, 2]
+#     assert factorial({'n': [5, 1], 'f': sum}) == 121
