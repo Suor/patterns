@@ -1,11 +1,8 @@
-import sys, inspect, ast, re
-from inspect import getargspec, ArgSpec, getsource
 from ast import *
-import copy
+import sys, inspect, ast, re, copy
 from meta.asttools import print_ast
-import dis
-from funcy import re_find, zipdict
-
+from funcy import re_find
+from helpers import make_call
 
 __all__ = ('Mismatch', 'patterns')
 
@@ -99,11 +96,7 @@ def transform_function(func_tree):
             # R: use helper for making calls, like make_call('len', 'value')
             # R: also len variable could be overwritten in function def scope,
             #    need to handle that
-            tests_and_assign = {'tests': [Compare(comparators=[Call(args=[Name(ctx=Load(), id='value')],
-                                                                    func=Name(ctx=Load(), id='len'),
-                                                                    keywords=[],
-                                                                    kwargs=None,
-                                                                    starargs=None)],
+            tests_and_assign = {'tests': [Compare(comparators=[make_call('len', 'value')],
                                                   left=Num(n=len(cond.elts)),
                                                   ops=[Eq()])],
                                 'assigns': []}
