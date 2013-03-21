@@ -2,7 +2,7 @@ from ast import *
 import sys, inspect, ast, re, copy
 from meta.asttools import print_ast
 from funcy import re_find
-from helpers import make_call, make_assign
+from helpers import make_call, make_assign, make_compare
 
 __all__ = ('Mismatch', 'patterns')
 
@@ -40,35 +40,30 @@ def transform_function(func_tree):
         else:
             return isinstance(expr, Name)
 
-    # R: strange function with mutable (!!!) arguments, just asking for trouble again,
-    #    really should be rewritten completely as pure function.
-    def build_tuple_destruct_ast(result, expr, indexes):
+    def destruct_to_tests_and_assigns(cond):
         def build_subscript_for_index(indexes):
-            if len(indexes) == 0:
-                return Name(ctx=Load(), id='value')
-            index = indexes.pop()
-            return Subscript(ctx=Load(), slice=Index(value=Num(n=index)),
-                             value=build_subscript_for_index(indexes))
+            def _build_subscript_for_index(indexes):
+                if len(indexes) == 0:
+                    return Name(ctx=Load(), id='value')
+                index = indexes.pop()
+                return Subscript(ctx=Load(), slice=Index(value=Num(n=index)),
+                                 value=_build_subscript_for_index(indexes))
+            return _build_subscript_for_index(copy.copy(indexes))
 
-        if isinstance(expr, Expr):
-            # R: Going for stack overflow, luckily there can't be Exprs in If tests
-            build_tuple_destruct_ast(result, expr, indexes)
-        elif isinstance(expr, Name):
-            result['assigns'].append(Assign(targets=[Name(ctx=Store(), id=expr.id)],
-                                            value=build_subscript_for_index(copy.copy(indexes))))
-        elif isinstance(expr, (Num, Str)):
-            result['tests'].append(Compare(comparators=[expr],
-                                           left=build_subscript_for_index(copy.copy(indexes)),
-                                           ops=[Eq()]))
-        elif isinstance(expr, Tuple):
-            # TODO: refactor
-            jndex = 0 # R: jndex?
-            for el in expr.elts:
-                new_indexes = []
-                new_indexes.extend(indexes)
-                new_indexes.append(jndex)
-                build_tuple_destruct_ast(result, el, new_indexes)
-                jndex += 1
+        def _destruct_to_tests_and_assigns(expr, indexes):
+            if isinstance(expr, Name):
+                return [], [make_assign(expr.id, build_subscript_for_index(indexes))]
+            if isinstance(expr, (Num, Str)):
+                return [make_compare(build_subscript_for_index(copy.copy(indexes)), '==', expr)], []
+            elif isinstance(expr, Tuple):
+                tests = []
+                assigns = []
+                for index, el in enumerate(expr.elts):
+                    new_tests, new_assigns = _destruct_to_tests_and_assigns(el, indexes + [index])
+                    tests.extend(new_tests)
+                    assigns.extend(new_assigns)
+                return tests, assigns
+        return _destruct_to_tests_and_assigns(cond, [])
 
     assert all(isinstance(t, ast.If) for t in func_tree.body), \
         'Patterns function should only have if statements'
@@ -87,42 +82,11 @@ def transform_function(func_tree):
         cond = test.test
 
         if isinstance(cond, Tuple) and has_vars(cond):
-            # R: lines too long, logic unclear:
-            #    constructing some half-backed result and then mutating it with a function
-            # R: should also test if value is a tuple
-            # R: use helper for making calls, like make_call('len', 'value')
-            # R: also len variable could be overwritten in function def scope,
-            #    need to handle that
-            tests_and_assign = {'tests': [Compare(comparators=[make_call('len', 'value')],
-                                                  left=Num(n=len(cond.elts)),
-                                                  ops=[Eq()])],
-                                'assigns': []}
-            build_tuple_destruct_ast(tests_and_assign, cond, [])
-
-
-            # Wrap if statment with
-            # try:
-            #   if_statment
-            # except TypeError:
-            #   pass
-            realtest = copy.copy(test)
-            # R: should not alter elements list we iterate.
-            #    Should not wrap arbitrary (library user supplied code) with try ... except.
-            #    This will lead to unwanted exception capturing.
-            func_tree.body[func_tree.body.index(test)] = TryExcept(body=[realtest],
-                                                                   handlers=[ExceptHandler(body=[Pass()],
-                                                                                           name=None,
-                                                                                           type=Name(ctx=Load(),
-                                                                                                     id='TypeError'))],
-                                                                   orelse=[])
-            if len(tests_and_assign['tests']) == 1:
-                realtest.test = tests_and_assign['tests'][0]
-            else:
-                #For multiple tests use And operator
-                realtest.test = BoolOp(op=And(), values=tests_and_assign['tests'])
-
-            tests_and_assign['assigns'].append(realtest.body[0])
-            realtest.body = tests_and_assign['assigns']
+            tests, assigns = destruct_to_tests_and_assigns(cond)
+            tests.append(make_compare(len(cond.elts), '==', make_call('len','value')))
+            test.test = BoolOp(op=And(), values=tests)
+            assigns.append(test.body[0])
+            test.body = assigns
 
         elif isinstance(cond, (Num, Str, List, Tuple)):
             test.test = Compare(comparators=[cond],
@@ -143,7 +107,7 @@ def transform_function(func_tree):
                                 tback=None,
                                 type=Name(ctx=Load(),
                                           id='Mismatch')))
-    print_ast(func_tree)
+    # print_ast(func_tree)
 
 
 def compile_func(func, tree):

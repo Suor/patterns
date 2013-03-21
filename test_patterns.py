@@ -92,7 +92,6 @@ def test_swallow():
     def swallow():
         if (1, x): 1 + '1'
 
-    # R: will mismatch here instead of TypeError
     with pytest.raises(TypeError): swallow((1, 2))
 
 
