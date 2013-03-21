@@ -2,7 +2,7 @@ from ast import *
 import sys, inspect, ast, re, copy
 from meta.asttools import print_ast
 from funcy import re_find
-from helpers import make_call
+from helpers import make_call, make_assign
 
 __all__ = ('Mismatch', 'patterns')
 
@@ -24,16 +24,13 @@ def patterns(func):
 
 
 def transform_function(func_tree):
-    # R: No point in having this function, it's not hiding complexity
-    #    Besides it's inconsistent - one function for two diffrent puporses
-    def get_final_operator(expr):
-        if isinstance(expr, Expr):
-            return Return(value=expr.value)
-        # R: elif would be better style
-        if isinstance(expr, Raise):
-            return expr
-        # R: No else fallback, asking for trouble,
-        #    doesn't really matter since function should be trashed anyway )
+    def wrap_tail_expr(if_expr):
+        """
+        Wrap last expression in if body with return
+        """
+        if isinstance(if_expr.body[-1], Expr):
+            if_expr.body[-1] = Return(value=if_expr.body[-1].value)
+        return if_expr
 
     def has_vars(expr):
         if isinstance(expr, Expr):
@@ -124,40 +121,24 @@ def transform_function(func_tree):
                 #For multiple tests use And operator
                 realtest.test = BoolOp(op=And(), values=tests_and_assign['tests'])
 
-            tests_and_assign['assigns'].append(get_final_operator(realtest.body[0]))
+            tests_and_assign['assigns'].append(realtest.body[0])
             realtest.body = tests_and_assign['assigns']
 
         elif isinstance(cond, (Num, Str, List, Tuple)):
             test.test = Compare(comparators=[cond],
                                 left=Name(ctx=Load(), id='value'),
                                 ops=[Eq()])
-            test.body = [get_final_operator(test.body[0])]
 
         elif isinstance(cond, Name):
-            var_name = cond.id
-            test.test = Name(ctx=Load(),
-                               id='True')
-            test.body = [Assign(targets=[Name(ctx=Store(), id=var_name)],
-                                value=Name(ctx=Load(), id='value')),
-                         get_final_operator(test.body[0])]
+            test.test = Name(ctx=Load(), id='True')
+            test.body.insert(0, make_assign(cond.id, 'value'))
 
         elif isinstance(cond, Compare) and isinstance(cond.ops[0], Is):
             assert len(cond.ops) == 1
+            test.test = make_call('isinstance', Name(ctx=Load(), id='value'), cond.comparators[0])
+            test.body.insert(0, make_assign(cond.left.id, 'value'))
 
-            var_name = cond.left.id
-            test.test = Call(
-                func     = Name(ctx=Load(), id='isinstance'),
-                args     = [Name(ctx=Load(), id='value'), cond.comparators[0]],
-                keywords = [],
-                kwargs   = None,
-                starargs = None
-            )
-            test.body = [
-                Assign(targets=[Name(ctx=Store(), id=var_name)],
-                       value=Name(ctx=Load(), id='value')),
-                get_final_operator(test.body[0])
-            ]
-
+    func_tree.body = map(wrap_tail_expr, func_tree.body)
     func_tree.body.append(Raise(inst=None,
                                 tback=None,
                                 type=Name(ctx=Load(),
