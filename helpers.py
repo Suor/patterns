@@ -33,3 +33,5 @@ def make_compare(left, operation, right):
     return Compare(comparators=[_wrap(right)], left=_wrap(left), ops=[op_map[operation]])
 
 
+def make_raise(exception):
+    return Raise(inst=None,tback=None,type=_wrap(exception))

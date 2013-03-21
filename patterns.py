@@ -2,7 +2,7 @@ from ast import *
 import sys, inspect, ast, re, copy
 from meta.asttools import print_ast
 from funcy import re_find
-from helpers import make_call, make_assign, make_compare
+from helpers import make_call, make_assign, make_compare, make_raise
 
 __all__ = ('Mismatch', 'patterns')
 
@@ -50,11 +50,20 @@ def transform_function(func_tree):
                                  value=_build_subscript_for_index(indexes))
             return _build_subscript_for_index(copy.copy(indexes))
 
+        def build_tests(indexes):
+            def _build_tests(indexes):
+                if len(indexes) == 0:
+                    return [Name(ctx=Load(), id='value')]
+                item = build_subscript_for_index(indexes)
+                indexes.pop()
+                return  _build_tests(indexes) + [item]
+            return map(lambda v: make_call('isinstance', v, 'tuple'), _build_tests(copy.copy(indexes[:-1])))
+
         def _destruct_to_tests_and_assigns(expr, indexes):
             if isinstance(expr, Name):
-                return [], [make_assign(expr.id, build_subscript_for_index(indexes))]
+                return build_tests(indexes), [make_assign(expr.id, build_subscript_for_index(indexes))]
             if isinstance(expr, (Num, Str)):
-                return [make_compare(build_subscript_for_index(copy.copy(indexes)), '==', expr)], []
+                return build_tests(indexes) + [make_compare(build_subscript_for_index(copy.copy(indexes)), '==', expr)], []
             elif isinstance(expr, Tuple):
                 tests = []
                 assigns = []
@@ -83,7 +92,8 @@ def transform_function(func_tree):
 
         if isinstance(cond, Tuple) and has_vars(cond):
             tests, assigns = destruct_to_tests_and_assigns(cond)
-            tests.append(make_compare(len(cond.elts), '==', make_call('len','value')))
+            tests.insert(0, make_compare(len(cond.elts), '==', make_call('len', 'value')))
+            tests.insert(0, make_call('isinstance', 'value', 'tuple'))
             test.test = BoolOp(op=And(), values=tests)
             assigns.append(test.body[0])
             test.body = assigns
@@ -103,10 +113,8 @@ def transform_function(func_tree):
             test.body.insert(0, make_assign(cond.left.id, 'value'))
 
     func_tree.body = map(wrap_tail_expr, func_tree.body)
-    func_tree.body.append(Raise(inst=None,
-                                tback=None,
-                                type=Name(ctx=Load(),
-                                          id='Mismatch')))
+    func_tree.body.append(make_raise('Mismatch'))
+
     # print_ast(func_tree)
 
 
