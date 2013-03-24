@@ -107,6 +107,18 @@ def test_swallow():
     with pytest.raises(TypeError): swallow((1, 2))
 
 
+def test_nested_types():
+    @patterns
+    def destruct():
+        if (x is int, y is int): x * y
+        if (s is str, n is int): len(s) * n
+        if (s is str, t is str): s + t
+
+    assert destruct((6, 7)) == 42
+    assert destruct(('hi', 3)) == 6
+    assert destruct(('hi', 'world')) == 'hiworld'
+
+
 # def test_factorial():
 #     @patterns
 #     def factorial():
