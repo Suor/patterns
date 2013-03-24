@@ -1,37 +1,52 @@
+import ast
 from ast import *
 
 __author__ = 'ir4y'
+__all__ = ['V', 'N', 'make_call', 'make_assign', 'make_eq', 'make_subscript']
 
 
-def _wrap(item):
-    if isinstance(item, int): return Num(n=item)
-    elif isinstance(item, str): return Name(ctx=Load(), id=item)
-    else: return item
+def V(value):
+    if isinstance(value, int):
+        return Num(n=value)
+    else:
+        raise TypeError("Don't know how to make AST value from %s" % repr(value))
+
+def N(id):
+  return Name(ctx=Load(), id=id)
+
+
+def wrap_carefully(value):
+    if isinstance(value, ast.expr):
+        return value
+    else:
+        return V(value)
 
 
 def make_call(func_name, *args):
-    return Call(args=map(_wrap, args),
-                func=Name(ctx=Load(), id=func_name),
-                keywords=[],
-                kwargs=None,
-                starargs=None)
-
+    return Call(
+        func=N(func_name), args=map(wrap_carefully, args),
+        keywords=[], kwargs=None, starargs=None
+    )
 
 def make_assign(left, right):
-    return Assign(targets=[Name(ctx=Store(), id=left)],
-                  value=_wrap(right))
+    return Assign(
+        targets = [Name(ctx=Store(), id=left)],
+        value   = wrap_carefully(right)
+    )
 
+def make_eq(left, right):
+    return Compare(
+        ops         = [Eq()],
+        left        = wrap_carefully(left),
+        comparators = [wrap_carefully(right)],
+    )
 
-def make_compare(left, operation, right):
-    op_map = {'==': Eq(),
-              '!=': NotEq(),
-              'is': Is(),
-              '<': Lt(),
-              '<=': LtE(),
-              '>': Gt(),
-              '>=': GtE()}
-    return Compare(comparators=[_wrap(right)], left=_wrap(left), ops=[op_map[operation]])
-
-
-def make_raise(exception):
-    return Raise(inst=None,tback=None,type=_wrap(exception))
+def make_subscript(expr, indexes):
+    if indexes:
+        return Subscript(
+            value = make_subscript(expr, indexes[:-1]),
+            ctx   = Load(),
+            slice = Index(value=V(indexes[-1])),
+        )
+    else:
+        return expr

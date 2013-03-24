@@ -1,8 +1,9 @@
 import copy
 from ast import *
+import meta
 from meta.asttools import print_ast
 
-from .helpers import make_call, make_assign, make_compare, make_raise
+from .helpers import *
 
 
 def transform_function(func_tree):
@@ -10,29 +11,20 @@ def transform_function(func_tree):
         'Patterns function should only have if statements'
 
     def destruct_to_tests_and_assigns(cond):
-        def build_subscript_for_index(indexes):
-            def _build_subscript_for_index(indexes):
-                if len(indexes) == 0:
-                    return Name(ctx=Load(), id='value')
-                index = indexes.pop()
-                return Subscript(ctx=Load(), slice=Index(value=Num(n=index)),
-                                 value=_build_subscript_for_index(indexes))
-            return _build_subscript_for_index(copy.copy(indexes))
-
         def build_tests(indexes):
             def _build_tests(indexes):
                 if len(indexes) == 0:
-                    return [Name(ctx=Load(), id='value')]
-                item = build_subscript_for_index(indexes)
+                    return [N('value')]
+                item = make_subscript(N('value'), indexes)
                 indexes.pop()
                 return  _build_tests(indexes) + [item]
-            return map(lambda v: make_call('isinstance', v, 'tuple'), _build_tests(copy.copy(indexes[:-1])))
+            return map(lambda v: make_call('isinstance', v, N('tuple')), _build_tests(copy.copy(indexes[:-1])))
 
         def _destruct_to_tests_and_assigns(expr, indexes):
             if isinstance(expr, Name):
-                return build_tests(indexes), [make_assign(expr.id, build_subscript_for_index(indexes))]
+                return build_tests(indexes), [make_assign(expr.id, make_subscript(N('value'), indexes))]
             if isinstance(expr, (Num, Str)):
-                return build_tests(indexes) + [make_compare(build_subscript_for_index(copy.copy(indexes)), '==', expr)], []
+                return build_tests(indexes) + [make_eq(make_subscript(N('value'), indexes), expr)], []
             elif isinstance(expr, Tuple):
                 tests = []
                 assigns = []
@@ -59,35 +51,34 @@ def transform_function(func_tree):
 
         if isinstance(cond, Tuple) and has_vars(cond):
             tests, assigns = destruct_to_tests_and_assigns(cond)
-            tests.insert(0, make_compare(len(cond.elts), '==', make_call('len', 'value')))
-            tests.insert(0, make_call('isinstance', 'value', 'tuple'))
+            tests.insert(0, make_eq(len(cond.elts), make_call('len', N('value'))))
+            tests.insert(0, make_call('isinstance', N('value'), N('tuple')))
             test.test = BoolOp(op=And(), values=tests)
             assigns.append(test.body[0])
             test.body = assigns
 
         elif isinstance(cond, (Num, Str, List, Tuple)):
-            test.test = Compare(comparators=[cond],
-                                left=Name(ctx=Load(), id='value'),
-                                ops=[Eq()])
+            test.test = make_eq(N('value'), cond)
 
         elif isinstance(cond, Name):
-            test.test = Name(ctx=Load(), id='True')
-            test.body.insert(0, make_assign(cond.id, 'value'))
+            test.test = V(1)
+            test.body.insert(0, make_assign(cond.id, N('value')))
 
         elif isinstance(cond, Compare) and isinstance(cond.ops[0], Is):
             assert len(cond.ops) == 1
-            test.test = make_call('isinstance', Name(ctx=Load(), id='value'), cond.comparators[0])
-            test.body.insert(0, make_assign(cond.left.id, 'value'))
+            test.test = make_call('isinstance', N('value'), cond.comparators[0])
+            test.body.insert(0, make_assign(cond.left.id, N('value')))
 
     func_tree.body = map(wrap_tail_expr, func_tree.body)
-    func_tree.body.append(make_raise('Mismatch'))
+    func_tree.body.append(Raise(type=N('Mismatch'), inst=None, tback=None))
 
     # print_ast(func_tree)
+    # print meta.dump_python_source(func_tree)
 
 
 def wrap_tail_expr(if_expr):
     """
-    Wrap last expression in if body with return
+    Wrap last expression in if body with Return node
     """
     if isinstance(if_expr.body[-1], Expr):
         if_expr.body[-1] = Return(value=if_expr.body[-1].value)
