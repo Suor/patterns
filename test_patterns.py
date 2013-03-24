@@ -18,6 +18,19 @@ def test_const():
     with pytest.raises(Mismatch): const({})
 
 
+def test_complex_body():
+    @patterns
+    def const():
+        if 1:
+            x = 'int'
+            x
+        if 'hi':
+            return 'str'
+
+    assert const(1) == 'int'
+    assert const('hi') == 'str'
+
+
 def test_global_ref():
     @patterns
     def _global():

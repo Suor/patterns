@@ -44,9 +44,6 @@ def transform_function(func_tree):
 
     # Transform tests to pattern matching
     for test in func_tree.body:
-        assert len(test.body) == 1
-        assert isinstance(test.body[0], (Expr, Raise))
-
         cond = test.test
 
         if isinstance(cond, Tuple) and has_vars(cond):
@@ -54,8 +51,7 @@ def transform_function(func_tree):
             tests.insert(0, make_eq(len(cond.elts), make_call('len', N('value'))))
             tests.insert(0, make_call('isinstance', N('value'), N('tuple')))
             test.test = BoolOp(op=And(), values=tests)
-            assigns.append(test.body[0])
-            test.body = assigns
+            test.body = assigns + test.body
 
         elif isinstance(cond, (Num, Str, List, Tuple)):
             test.test = make_eq(N('value'), cond)
@@ -73,7 +69,7 @@ def transform_function(func_tree):
     func_tree.body.append(Raise(type=N('Mismatch'), inst=None, tback=None))
 
     # print_ast(func_tree)
-    # print meta.dump_python_source(func_tree)
+    print meta.dump_python_source(func_tree)
 
 
 def wrap_tail_expr(if_expr):
