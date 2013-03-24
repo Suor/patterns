@@ -73,18 +73,17 @@ def test_destruct_tuple():
     with pytest.raises(Mismatch): destruct(1)
 
 
-def test_inserted_tuple():
+def test_nested_tuples():
     @patterns
     def destruct():
-        if (((1,1),2,3), (1,2,3), x): x
-        if (1, (1,2)): 3
-        if (x, (1,(y))): x + y # R: (y) - not a tuple
-        if ((1,2,3), (1,2,3), x): x
+        if ((1, 2), 3, x): x
+        if ((1, x), 3, 4): x
+        if ((1, x), 3, y): x + y
 
-    assert destruct((((1,1),2,3), (1,2,3), (1,2))) == (1,2)
-    assert destruct((1, (1,2))) == 3
-    assert destruct((11, (1,(11)))) == 22
-    assert destruct(((1,2,3), (1,2,3),(1,2,(1,10)))) == (1,2,(1,10))
+    assert destruct(((1, 2), 3, 'world')) == 'world'
+    assert destruct(((1, 'hi'), 3, 4)) == 'hi'
+    assert destruct(((1, 'hi'), 3, 'world')) == 'hiworld'
+    assert destruct(((1, 2), 3, 4)) == 4
 
 
 def test_swallow():
