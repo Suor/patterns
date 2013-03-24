@@ -25,6 +25,7 @@ def patterns(func):
     return compile_func(func, tree)
 
 
+# TODO: wrap referenced globals somehow to prevent name conflicts with global/local vars
 def compile_func(func, tree):
     def _compile_func():
         # TODO: this one doesn't work quite well, handle it
