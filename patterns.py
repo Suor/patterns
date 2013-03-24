@@ -1,10 +1,12 @@
-from ast import *
 import sys, inspect, ast, re, copy
+from ast import *
 from meta.asttools import print_ast
 from funcy import re_find
+
 from helpers import make_call, make_assign, make_compare, make_raise
 
-__all__ = ('Mismatch', 'patterns')
+
+__all__ = ('patterns', 'Mismatch')
 
 
 class Mismatch(Exception):
@@ -24,21 +26,8 @@ def patterns(func):
 
 
 def transform_function(func_tree):
-    def wrap_tail_expr(if_expr):
-        """
-        Wrap last expression in if body with return
-        """
-        if isinstance(if_expr.body[-1], Expr):
-            if_expr.body[-1] = Return(value=if_expr.body[-1].value)
-        return if_expr
-
-    def has_vars(expr):
-        if isinstance(expr, Expr):
-            return has_vars(expr.value)
-        elif isinstance(expr, Tuple):
-            return any(has_vars(el) for el in expr.elts)
-        else:
-            return isinstance(expr, Name)
+    assert all(isinstance(t, ast.If) for t in func_tree.body), \
+        'Patterns function should only have if statements'
 
     def destruct_to_tests_and_assigns(cond):
         def build_subscript_for_index(indexes):
@@ -74,8 +63,6 @@ def transform_function(func_tree):
                 return tests, assigns
         return _destruct_to_tests_and_assigns(cond, [])
 
-    assert all(isinstance(t, ast.If) for t in func_tree.body), \
-        'Patterns function should only have if statements'
 
     # Adjust arglist and decorators
     func_tree.args.args.append(Name(ctx=Param(), id='value'))
@@ -116,6 +103,21 @@ def transform_function(func_tree):
     func_tree.body.append(make_raise('Mismatch'))
 
     # print_ast(func_tree)
+
+
+def wrap_tail_expr(if_expr):
+    """
+    Wrap last expression in if body with return
+    """
+    if isinstance(if_expr.body[-1], Expr):
+        if_expr.body[-1] = Return(value=if_expr.body[-1].value)
+    return if_expr
+
+def has_vars(expr):
+    if isinstance(expr, Tuple):
+        return any(has_vars(el) for el in expr.elts)
+    else:
+        return isinstance(expr, Name)
 
 
 def compile_func(func, tree):
