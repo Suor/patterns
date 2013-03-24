@@ -10,31 +10,22 @@ def transform_function(func_tree):
     assert all(isinstance(t, If) for t in func_tree.body), \
         'Patterns function should only have if statements'
 
-    def destruct_to_tests_and_assigns(cond):
-        def build_tests(indexes):
-            def _build_tests(indexes):
-                if len(indexes) == 0:
-                    return [N('value')]
-                item = make_subscript(N('value'), indexes)
-                indexes.pop()
-                return  _build_tests(indexes) + [item]
-            return map(lambda v: make_call('isinstance', v, N('tuple')), _build_tests(copy.copy(indexes[:-1])))
-
-        def _destruct_to_tests_and_assigns(expr, indexes):
-            if isinstance(expr, Name):
-                return build_tests(indexes), [make_assign(expr.id, make_subscript(N('value'), indexes))]
-            if isinstance(expr, (Num, Str)):
-                return build_tests(indexes) + [make_eq(make_subscript(N('value'), indexes), expr)], []
-            elif isinstance(expr, Tuple):
-                tests = []
-                assigns = []
-                for index, el in enumerate(expr.elts):
-                    new_tests, new_assigns = _destruct_to_tests_and_assigns(el, indexes + [index])
-                    tests.extend(new_tests)
-                    assigns.extend(new_assigns)
-                return tests, assigns
-        return _destruct_to_tests_and_assigns(cond, [])
-
+    def destruct_to_tests_and_assigns(topic, pattern):
+        if isinstance(pattern, (Num, Str)):
+            return [make_eq(topic, pattern)], []
+        elif isinstance(pattern, Name):
+            return [], [make_assign(pattern.id, topic)]
+        elif isinstance(pattern, Tuple):
+            tests = [
+                make_call('isinstance', topic, N('tuple')),
+                make_eq(make_call('len', topic), len(pattern.elts))
+            ]
+            assigns = []
+            for i, elt in enumerate(pattern.elts):
+                t, a = destruct_to_tests_and_assigns(make_subscript(topic, i), elt)
+                tests.extend(t)
+                assigns.extend(a)
+            return tests, assigns
 
     # Adjust arglist and decorators
     func_tree.args.args.append(Name(ctx=Param(), id='value'))
@@ -47,9 +38,7 @@ def transform_function(func_tree):
         cond = test.test
 
         if isinstance(cond, Tuple) and has_vars(cond):
-            tests, assigns = destruct_to_tests_and_assigns(cond)
-            tests.insert(0, make_eq(len(cond.elts), make_call('len', N('value'))))
-            tests.insert(0, make_call('isinstance', N('value'), N('tuple')))
+            tests, assigns = destruct_to_tests_and_assigns(N('value'), cond)
             test.test = BoolOp(op=And(), values=tests)
             test.body = assigns + test.body
 

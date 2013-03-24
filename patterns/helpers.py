@@ -41,12 +41,9 @@ def make_eq(left, right):
         comparators = [wrap_carefully(right)],
     )
 
-def make_subscript(expr, indexes):
-    if indexes:
-        return Subscript(
-            value = make_subscript(expr, indexes[:-1]),
-            ctx   = Load(),
-            slice = Index(value=V(indexes[-1])),
-        )
-    else:
-        return expr
+def make_subscript(expr, index):
+    return Subscript(
+        value = expr,
+        slice = Index(value=V(index)),
+        ctx   = Load(),
+    )
