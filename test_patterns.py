@@ -7,15 +7,24 @@ def test_const():
     def const():
         if 1: 'int'
         if 'hi': 'str'
-        if [1, 2]: 'list'
-        if (1, 2): 'tuple'
 
     assert const(1) == 'int'
     assert const('hi') == 'str'
-    assert const([1, 2]) == 'list'
-    assert const((1, 2)) == 'tuple'
     with pytest.raises(Mismatch): const(2)
     with pytest.raises(Mismatch): const({})
+
+
+def test_container_const():
+    class L(list): pass
+
+    @patterns
+    def const():
+        if [1, 2]: 'list'
+        if (1, 2): 'tuple'
+
+    assert const([1, 2]) == 'list'
+    assert const((1, 2)) == 'tuple'
+    assert const(L([1, 2])) == 'list'
 
 
 def test_complex_body():
