@@ -2,7 +2,7 @@ import ast
 from ast import *
 
 __author__ = 'ir4y'
-__all__ = ['V', 'N', 'make_call', 'make_assign', 'make_eq', 'make_subscript']
+__all__ = ['V', 'N', 'make_call', 'make_assign', 'make_op', 'make_eq', 'make_subscript']
 
 
 def V(value):
@@ -34,12 +34,15 @@ def make_assign(left, right):
         value   = wrap_carefully(right)
     )
 
-def make_eq(left, right):
+def make_op(op_class, left, right):
     return Compare(
-        ops         = [Eq()],
+        ops         = [op_class()],
         left        = wrap_carefully(left),
         comparators = [wrap_carefully(right)],
     )
+
+def make_eq(left, right):
+    return make_op(Eq, left, right)
 
 def make_subscript(expr, index):
     return Subscript(

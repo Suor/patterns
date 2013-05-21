@@ -128,6 +128,25 @@ def test_nested_types():
     assert destruct(('hi', 'world')) == 'hiworld'
 
 
+def test_tail_destruct():
+    @patterns
+    def tail_destruct():
+        if []: 0
+        if [x] + xs: tail_destruct(xs) + 1
+        if (): ''
+        if (x is int,) + xs: 't' + tail_destruct(xs)
+        if (s is str,) + xs: s + tail_destruct(xs)
+
+    assert tail_destruct([]) == 0
+    assert tail_destruct([7]) == 1
+    assert tail_destruct([1,2,3]) == 3
+
+    assert tail_destruct(()) == ''
+    assert tail_destruct((1,)) == 't'
+    assert tail_destruct((1,2,3)) == 'ttt'
+    assert tail_destruct((1,'X',2)) == 'tXt'
+
+
 # def test_factorial():
 #     @patterns
 #     def factorial():
