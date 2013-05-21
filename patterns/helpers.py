@@ -47,6 +47,6 @@ def make_eq(left, right):
 def make_subscript(expr, index):
     return Subscript(
         value = expr,
-        slice = Index(value=V(index)),
+        slice = Index(value=wrap_carefully(index)),
         ctx   = Load(),
     )

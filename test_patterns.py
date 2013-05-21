@@ -95,6 +95,21 @@ def test_destruct_tuple():
     with pytest.raises(Mismatch): destruct(1)
 
 
+def test_destruct_dict():
+    @patterns
+    def destruct():
+        if {}: 0
+        if {'a': a}: raise TypeError
+        if {'a': a, 'b': b}: a * b
+        # TODO: short form like this:
+        #           if {a, b}: a * b
+        #       how handle sets?
+
+    assert destruct({}) == 0
+    assert destruct({'a': 6, 'b': 7}) == 42
+    with pytest.raises(Mismatch): destruct({'a': 6, 'b': 7, 'c': None})
+
+
 def test_nested_tuples():
     @patterns
     def destruct():

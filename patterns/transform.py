@@ -22,7 +22,7 @@ def transform_function(func_tree):
         if isinstance(cond, (Num, Str, List, Tuple)) and not has_vars(cond):
             test.test = make_eq(N('value'), cond)
 
-        if isinstance(cond, (Num, Str, List, Tuple, Name, Compare, BinOp)):
+        if isinstance(cond, (Num, Str, Name, Compare, List, Tuple, Dict, BinOp)):
             tests, assigns = destruct_to_tests_and_assigns(N('value'), cond)
             test.test = BoolOp(op=And(), values=tests) if tests else V(1)
             test.body = assigns + test.body
@@ -34,7 +34,7 @@ def transform_function(func_tree):
     func_tree.body.append(Raise(type=N('Mismatch'), inst=None, tback=None))
 
     # print_ast(func_tree)
-    # print meta.dump_python_source(func_tree)
+    print meta.dump_python_source(func_tree)
 
 
 def destruct_to_tests_and_assigns(topic, pattern):
@@ -42,16 +42,17 @@ def destruct_to_tests_and_assigns(topic, pattern):
         return [make_eq(topic, pattern)], []
     elif isinstance(pattern, Name):
         return [], [make_assign(pattern.id, topic)]
-    elif isinstance(pattern, (List, Tuple)):
-        coll_tests = [
-            make_call('isinstance', topic, N(pattern.__class__.__name__.lower())),
-            make_eq(make_call('len', topic), len(pattern.elts))
-        ]
-        tests, assigns = subscript_tests_and_assigns(topic, pattern)
-        return coll_tests + tests, assigns
     elif isinstance(pattern, Compare) and len(pattern.ops) == 1 and isinstance(pattern.ops[0], Is):
         return [make_call('isinstance', topic, pattern.comparators[0])], \
                [make_assign(pattern.left.id, topic)]
+    elif isinstance(pattern, (List, Tuple, Dict)):
+        elts = getattr(pattern, 'elts', []) or getattr(pattern, 'values', [])
+        coll_tests = [
+            make_call('isinstance', topic, N(pattern.__class__.__name__.lower())),
+            make_eq(make_call('len', topic), len(elts))
+        ]
+        tests, assigns = subscript_tests_and_assigns(topic, pattern)
+        return coll_tests + tests, assigns
     elif isinstance(pattern, BinOp) and isinstance(pattern.op, Add) \
          and isinstance(pattern.left, (List, Tuple)) and isinstance(pattern.right, Name):
         coll_tests = [
@@ -73,8 +74,9 @@ def destruct_to_tests_and_assigns(topic, pattern):
 def subscript_tests_and_assigns(topic, pattern):
     tests = []
     assigns = []
-    for i, elt in enumerate(pattern.elts):
-        t, a = destruct_to_tests_and_assigns(make_subscript(topic, i), elt)
+    items = enumerate(pattern.elts) if hasattr(pattern, 'elts') else zip(pattern.keys, pattern.values)
+    for key, elt in items:
+        t, a = destruct_to_tests_and_assigns(make_subscript(topic, key), elt)
         tests.extend(t)
         assigns.extend(a)
     return tests, assigns
