@@ -1,6 +1,5 @@
 import sys, inspect, ast, re
 from ast import *
-from meta.asttools import print_ast
 from funcy import re_find
 
 from .transform import transform_function
@@ -54,7 +53,6 @@ def compile_func(func, tree):
         return func
     else:
         _compile_func()
-        # dis.dis(context[func.__name__])
         return context[func.__name__]
 
 

@@ -1,6 +1,4 @@
 from ast import *
-import meta
-from meta.asttools import print_ast
 
 from .helpers import *
 
@@ -12,8 +10,6 @@ def transform_function(func_tree):
     # Adjust arglist and decorators
     func_tree.args.args.append(Name(ctx=Param(), id='value'))
     func_tree.decorator_list = []
-
-    # print_ast(func_tree)
 
     # Transform tests to pattern matching
     for test in func_tree.body:
@@ -32,9 +28,6 @@ def transform_function(func_tree):
 
     func_tree.body = map(wrap_tail_expr, func_tree.body)
     func_tree.body.append(Raise(type=N('Mismatch'), inst=None, tback=None))
-
-    # print_ast(func_tree)
-    print meta.dump_python_source(func_tree)
 
 
 def destruct_to_tests_and_assigns(topic, pattern):
