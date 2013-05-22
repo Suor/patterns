@@ -12,6 +12,7 @@ setup(
     license='BSD',
 
     packages=['patterns'],
+    install_requires=['meta'],
 
     classifiers=[
         'Development Status :: 3 - Alpha',
