@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='patterns',
-    version='0.1.0',
+    version='0.1.1',
     author='Alexander Schepanovski',
     author_email='suor.web@gmail.com',
 
