@@ -3,6 +3,18 @@ Patterns
 
 Pattern matching for python.
 
+
+Installation
+-------------
+
+::
+
+    pip install patterns
+
+
+Usage
+-----
+
 .. code:: python
 
     from patterns import patterns, Mismatch
@@ -19,3 +31,17 @@ Pattern matching for python.
     assert factorial(5) == 120
     assert factorial([3,4,2]) == [6, 24, 2]
     assert factorial({'n': [5, 1], 'f': sum}) == 121
+
+    factorial('hello') # raises Mismatch
+
+See tests for more examples.
+
+
+TODO
+----
+
+- docs
+- matching to ``_`` should not capture
+- name parameter
+- better handling of ``Mismatch`` passing to function env
+- non-strict dict matching
