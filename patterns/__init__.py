@@ -69,4 +69,4 @@ def get_ast(func):
 
 
 def func_file(func):
-    return sys.modules[func.__module__].__file__
+    return getattr(sys.modules[func.__module__], '__file__', '<nofile>')
