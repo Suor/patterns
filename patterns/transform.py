@@ -19,7 +19,7 @@ def transform_function(func_tree):
         if isinstance(cond, (Num, Str, List, Tuple)) and not has_vars(cond):
             test.test = make_eq(N('value'), cond)
 
-        if isinstance(cond, (Num, Str, Name, Compare, List, Tuple, Dict, BinOp)):
+        elif isinstance(cond, (Num, Str, Name, Compare, List, Tuple, Dict, BinOp)):
             tests, assigns = destruct_to_tests_and_assigns(N('value'), cond)
             test.test = BoolOp(op=And(), values=tests) if tests else V(1)
             test.body = assigns + test.body
