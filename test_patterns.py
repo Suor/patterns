@@ -175,3 +175,17 @@ def test_factorial():
     assert factorial(5) == 120
     assert factorial([3,4,2]) == [6, 24, 2]
     assert factorial({'n': [5, 1], 'f': sum}) == 121
+
+
+def test_nested_capture():
+    @patterns
+    def answer():
+        # captute names should be diffrent here to get NameError
+        # if some structure is not handled properly
+        if [l]: 'list: %s' % l
+        if (t,): 'tuple: %s' % t
+        if {'key': d}: 'dict: %s' % d
+
+    assert answer(['alice']) == 'list: alice'
+    assert answer(('alice',)) == 'tuple: alice'
+    assert answer({'key': 'alice'}) == 'dict: alice'

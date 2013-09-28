@@ -1,5 +1,6 @@
 from ast import *
 import meta
+from itertools import chain
 
 from .helpers import *
 
@@ -16,7 +17,7 @@ def transform_function(func_tree):
     for test in func_tree.body:
         cond = test.test
 
-        if isinstance(cond, (Num, Str, List, Tuple)) and not has_vars(cond):
+        if isinstance(cond, (Num, Str, List, Tuple, Dict)) and not has_vars(cond):
             test.test = make_eq(N('value'), cond)
 
         elif isinstance(cond, (Num, Str, Name, Compare, List, Tuple, Dict, BinOp)):
@@ -84,8 +85,15 @@ def wrap_tail_expr(if_expr):
         if_expr.body[-1] = Return(value=if_expr.body[-1].value)
     return if_expr
 
+
 def has_vars(expr):
-    if isinstance(expr, Tuple):
+    if isinstance(expr, (Tuple, List)):
         return any(has_vars(el) for el in expr.elts)
+    elif isinstance(expr, Dict):
+        return any(has_vars(e) for e in chain(expr.values, expr.keys))
+    elif isinstance(expr, (Name, Compare)):
+        return True
+    elif isinstance(expr, (Num, Str)):
+        return False
     else:
-        return isinstance(expr, (Name, Compare))
+        raise TypeError("Don't know how to handle %s" % expr)

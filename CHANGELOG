@@ -1,3 +1,6 @@
+- fixed nested capture for list
+- optimized const dict matching
+
 0.1.1
 - fixed console usage
 - removed debug output
