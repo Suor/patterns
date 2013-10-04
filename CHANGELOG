@@ -1,3 +1,4 @@
+0.1.2
 - fixed nested capture for list
 - optimized const dict matching
 - removed funcy dependency
