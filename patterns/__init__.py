@@ -1,6 +1,5 @@
 import sys, inspect, ast, re
 from ast import *
-from funcy import re_find
 
 from .transform import transform_function
 
@@ -61,7 +60,7 @@ def get_ast(func):
     source = inspect.getsource(func)
 
     # Fix extra indent if present
-    spaces = re_find(r'^\s+', source)
+    spaces = re.search(r'^\s+', source).group()
     if spaces:
         source = re.sub(r'(^|\n)' + spaces, '\n', source)
 
