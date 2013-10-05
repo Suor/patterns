@@ -18,7 +18,6 @@ def V(value):
 def N(id):
   return Name(ctx=Load(), id=id)
 
-
 if PY3:
     def A(id):
         return arg(arg=id, annotation=None)
@@ -40,7 +39,6 @@ def make_call(func_name, *args):
         keywords=[], kwargs=None, starargs=None
     )
 
-
 def make_arguments(args):
     # Some fields are only needed for python 3,
     # but we pass them always as they are safely ignored by python 2
@@ -51,13 +49,13 @@ def make_arguments(args):
         vararg=None, varargannotation=None
     )
 
-
 if PY3:
     def make_raise(expr):
         return Raise(exc=expr, cause=None)
 else:
     def make_raise(expr):
         return Raise(type=expr, inst=None, tback=None)
+
 
 def make_assign(left, right):
     return Assign(
