@@ -60,7 +60,7 @@ def get_ast(func):
     source = inspect.getsource(func)
 
     # Fix extra indent if present
-    spaces = re.search(r'^\s+', source).group()
+    spaces = re.search(r'^\s*', source).group()
     if spaces:
         source = re.sub(r'(^|\n)' + spaces, '\n', source)
 
