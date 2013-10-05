@@ -174,3 +174,12 @@ def test_nested_capture():
     assert answer(['alice']) == 'list: alice'
     assert answer(('alice',)) == 'tuple: alice'
     assert answer({'key': 'alice'}) == 'dict: alice'
+
+
+def test_wrong_pattern():
+    def wrong():
+        @patterns
+        def _wrong():
+            if map(): 1
+
+    with pytest.raises(TypeError): wrong()
