@@ -3,6 +3,7 @@ import meta
 from itertools import chain
 
 from .helpers import *
+from .cross import *
 
 
 def transform_function(func_tree):
@@ -10,7 +11,7 @@ def transform_function(func_tree):
         'Patterns function should only have if statements'
 
     # Adjust arglist and decorators
-    func_tree.args.args.append(Name(ctx=Param(), id='value'))
+    func_tree.args.args.append(A('value'))
     func_tree.decorator_list = []
 
     # Transform tests to pattern matching
@@ -22,14 +23,15 @@ def transform_function(func_tree):
 
         elif isinstance(cond, (Num, Str, Name, Compare, List, Tuple, Dict, BinOp)):
             tests, assigns = destruct_to_tests_and_assigns(N('value'), cond)
-            test.test = BoolOp(op=And(), values=tests) if tests else V(1)
+            test.test = BoolOp(op=And(), values=tests) if len(tests) > 1 else \
+                                              tests[0] if tests else V(1)
             test.body = assigns + test.body
 
         else:
             raise TypeError("Don't know how to match %s" % meta.dump_python_source(cond).strip())
 
-    func_tree.body = map(wrap_tail_expr, func_tree.body)
-    func_tree.body.append(Raise(type=N('Mismatch'), inst=None, tback=None))
+    func_tree.body = lmap(wrap_tail_expr, func_tree.body)
+    func_tree.body.append(make_raise(N('Mismatch')))
 
 
 def destruct_to_tests_and_assigns(topic, pattern):

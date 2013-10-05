@@ -1,6 +1,8 @@
 import sys, inspect, ast, re
 from ast import *
 
+from .cross import *
+from .helpers import *
 from .transform import transform_function
 
 
@@ -25,21 +27,14 @@ def patterns(func):
 
 # TODO: wrap referenced globals somehow to prevent name conflicts with global/local vars
 def compile_func(func, tree):
-    def _compile_func():
-        # TODO: this one doesn't work quite well, handle it
-        ast.fix_missing_locations(tree)
-        code = compile(tree, func_file(func), 'single')
-        exec code in func.__globals__, context
-
     def wrap_func(func_tree, arg_names):
-        args = [Name(ctx=Param(), id=name) for name in arg_names]
         return FunctionDef(
             name = func_tree.name + '__wrapped',
-            args = arguments(args=args, defaults=[], vararg=None, kwarg=None),
+            args = make_arguments(lmap(A, arg_names)),
             decorator_list = [],
             body = [
                 func_tree,
-                Return(value=Name(ctx=Load(), id=func_tree.name))
+                Return(value=N(func_tree.name))
             ]
         )
 
@@ -47,12 +42,17 @@ def compile_func(func, tree):
     if func.__closure__:
         kwargs = context.copy()
         tree.body[0] = wrap_func(tree.body[0], kwargs.keys())
-        _compile_func()
+        _compile_func(func, tree, context)
         func.__code__ = context[func.__name__ + '__wrapped'](**kwargs).__code__
         return func
     else:
-        _compile_func()
+        _compile_func(func, tree, context)
         return context[func.__name__]
+
+def _compile_func(func, tree, context):
+    ast.fix_missing_locations(tree)
+    code = compile(tree, func_file(func), 'single')
+    exec(code, func.__globals__, context)
 
 
 def get_ast(func):

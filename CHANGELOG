@@ -1,3 +1,4 @@
+- python 3.3 support
 - fixed @patterns for unindented functions
 
 0.1.2
