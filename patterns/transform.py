@@ -33,6 +33,8 @@ def transform_function(func_tree):
     func_tree.body = lmap(wrap_tail_expr, func_tree.body)
     func_tree.body.append(make_raise(N('Mismatch')))
 
+    # Set raise Mismatch lineno just after function end
+    func_tree.body[-1].lineno = last_lineno(func_tree) + 1
 
 def destruct_to_tests_and_assigns(topic, pattern):
     if isinstance(pattern, (Num, Str)):
@@ -99,3 +101,12 @@ def has_vars(expr):
         return False
     else:
         raise TypeError("Don't know how to handle %s" % expr)
+
+
+def last_lineno(node):
+    lineno = getattr(node, 'lineno', None)
+    if hasattr(node, 'body'):
+        linenos = (last_lineno(n) for n in reversed(node.body))
+        return next((n for n in linenos if n is not None), lineno)
+    else:
+        return lineno

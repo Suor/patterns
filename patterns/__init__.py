@@ -64,6 +64,9 @@ def get_ast(func):
     if spaces:
         source = re.sub(r'(^|\n)' + spaces, '\n', source)
 
+    # Preserve line numbers
+    source = '\n' * (func.__code__.co_firstlineno - 2) + source
+
     return ast.parse(source, func_file(func), 'single')
 
 

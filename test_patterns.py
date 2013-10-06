@@ -183,3 +183,23 @@ def test_wrong_pattern():
             if map(): 1
 
     with pytest.raises(TypeError): wrong()
+
+
+def test_exception():
+    import sys, inspect
+    class E(Exception): pass
+
+    BASE_LINE = inspect.currentframe().f_lineno
+
+    @patterns
+    def exception():
+        if 1: raise E
+        if 2:
+            raise E
+
+    for value, exc, line in [(1, E, BASE_LINE+4), (2, E, BASE_LINE+6), (3, Mismatch, BASE_LINE+7)]:
+        try:
+            exception(value)
+        except exc:
+            _, _, exc_traceback = sys.exc_info()
+            assert line == exc_traceback.tb_next.tb_lineno
