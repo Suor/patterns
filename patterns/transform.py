@@ -1,5 +1,6 @@
 from ast import *
 import meta
+from meta.asttools import print_ast
 from itertools import chain
 
 from .helpers import *
@@ -35,6 +36,10 @@ def transform_function(func_tree):
 
     # Set raise Mismatch lineno just after function end
     func_tree.body[-1].lineno = last_lineno(func_tree) + 1
+
+    # print_ast(func_tree)
+    # print(meta.dump_python_source(func_tree))
+
 
 def destruct_to_tests_and_assigns(topic, pattern):
     if isinstance(pattern, (Num, Str)):
