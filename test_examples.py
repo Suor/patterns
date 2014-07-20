@@ -31,6 +31,7 @@ def test_depth():
     n3 = make_node(3, n1, n1)
     n4 = make_node(4, n2, n3)
 
+    # TODO: make test distingishing between Name and NameConstant
     assert depth(None) == 0
     assert depth(n1) == 1
     assert depth(n2) == 2

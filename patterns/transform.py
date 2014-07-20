@@ -1,5 +1,10 @@
 from itertools import chain
 from ast import *
+# A new thing in Python 3.4
+try:
+    NameConstant
+except NameError:
+    NameConstant = Name
 
 import codegen
 
@@ -22,7 +27,7 @@ def transform_function(func_tree):
         if isinstance(cond, (Num, Str, List, Tuple, Dict)) and not has_vars(cond):
             test.test = make_eq(N('value'), cond)
 
-        elif isinstance(cond, (Num, Str, Name, Compare, List, Tuple, Dict, BinOp)):
+        elif isinstance(cond, (Num, Str, Name, NameConstant, Compare, List, Tuple, Dict, BinOp)):
             tests, assigns = destruct_to_tests_and_assigns(N('value'), cond)
             test.test = BoolOp(op=And(), values=tests) if len(tests) > 1 else \
                                               tests[0] if tests else V(1)
@@ -47,6 +52,8 @@ def destruct_to_tests_and_assigns(topic, pattern):
         return [make_eq(topic, pattern)], []
     elif isinstance(pattern, Name):
         return [], [make_assign(pattern.id, topic)]
+    elif isinstance(pattern, NameConstant):
+        return [make_op(Is, topic, pattern)], []
     elif isinstance(pattern, Compare) and len(pattern.ops) == 1 and isinstance(pattern.ops[0], Is):
         return [make_call('isinstance', topic, pattern.comparators[0])], \
                [make_assign(pattern.left.id, topic)]
