@@ -1,7 +1,7 @@
-from ast import *
-import meta
-from meta.asttools import print_ast
 from itertools import chain
+from ast import *
+
+import codegen
 
 from .helpers import *
 from .cross import *
@@ -29,7 +29,8 @@ def transform_function(func_tree):
             test.body = assigns + test.body
 
         else:
-            raise TypeError("Don't know how to match %s" % meta.dump_python_source(cond).strip())
+            raise TypeError("Don't know how to match %s" \
+                % (codegen.to_source(cond).strip() or cond))
 
     func_tree.body = lmap(wrap_tail_expr, func_tree.body)
     func_tree.body.append(make_raise(N('Mismatch')))
@@ -37,8 +38,8 @@ def transform_function(func_tree):
     # Set raise Mismatch lineno just after function end
     func_tree.body[-1].lineno = last_lineno(func_tree) + 1
 
-    # print_ast(func_tree)
-    # print(meta.dump_python_source(func_tree))
+    # print(dump(func_tree))
+    # print(codegen.to_source(func_tree))
 
 
 def destruct_to_tests_and_assigns(topic, pattern):
@@ -72,7 +73,8 @@ def destruct_to_tests_and_assigns(topic, pattern):
         tests, assigns = subscript_tests_and_assigns(topic, pattern.left)
         return coll_tests + tests, assigns + coll_assigns
     else:
-        raise TypeError("Don't know how to match %s" % meta.dump_python_source(pattern).strip())
+        raise TypeError("Don't know how to match %s" \
+            % (codegen.to_source(pattern).strip() or pattern))
 
 
 def subscript_tests_and_assigns(topic, pattern):

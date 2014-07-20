@@ -12,7 +12,7 @@ setup(
     license='BSD',
 
     packages=['patterns'],
-    install_requires=['meta'],
+    install_requires=['codegen'],
 
     classifiers=[
         'Development Status :: 3 - Alpha',
