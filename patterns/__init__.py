@@ -39,7 +39,7 @@ def compile_func(func, tree):
         )
 
     context = sys._getframe(2).f_locals
-    if func.__closure__:
+    if getattr(func, '__closure__', None) or getattr(func, 'func_closure', None):
         kwargs = context.copy()
         tree.body[0] = wrap_func(tree.body[0], kwargs.keys())
         _compile_func(func, tree, context)
