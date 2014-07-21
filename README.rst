@@ -1,7 +1,7 @@
 Patterns |Build Status|
 ========
 
-Pattern matching for python.
+Pattern matching for python. Works in Python 2.7, 3.3+ and pypy.
 
 
 Installation

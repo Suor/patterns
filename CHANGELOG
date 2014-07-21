@@ -1,3 +1,4 @@
+- pypy support
 - handle None, True, False right
 
 0.2
