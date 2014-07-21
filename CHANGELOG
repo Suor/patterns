@@ -1,3 +1,4 @@
+0.2
 - python 3.3 and 3.4 support
 - preserve line numbers
 - fixed @patterns for unindented functions
