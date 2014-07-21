@@ -1,4 +1,4 @@
-Patterns
+Patterns |Build Status|
 ========
 
 Pattern matching for python.
@@ -46,3 +46,7 @@ TODO
 - name parameter
 - better handling of ``Mismatch`` passing to function env
 - non-strict dict matching
+
+
+.. |Build Status| image:: https://travis-ci.org/Suor/patterns.svg?branch=master
+   :target: https://travis-ci.org/Suor/patterns

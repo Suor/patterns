@@ -7,7 +7,7 @@ setup(
     author_email='suor.web@gmail.com',
 
     description='Pattern matching for python',
-    long_description=open('README.rst').read(),
+    long_description=open('README.rst').read().replace('|Build Status|', '', 1),
     url='http://github.com/Suor/patterns',
     license='BSD',
 
