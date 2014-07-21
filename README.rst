@@ -41,7 +41,6 @@ TODO
 ----
 
 - docs
-- better handling of None, True, False matching
 - matching to ``_`` should not capture
 - name parameter
 - better handling of ``Mismatch`` passing to function env

@@ -5,11 +5,15 @@ from patterns import patterns, Mismatch
 def test_const():
     @patterns
     def const():
-        if 1: 'int'
+        if 42: 'int'
         if 'hi': 'str'
+        if True: 'bool'
+        if None: 'none'
 
-    assert const(1) == 'int'
+    assert const(42) == 'int'
     assert const('hi') == 'str'
+    assert const(True) == 'bool'
+    assert const(None) == 'none'
     with pytest.raises(Mismatch): const(2)
     with pytest.raises(Mismatch): const({})
 

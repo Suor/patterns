@@ -47,11 +47,16 @@ def transform_function(func_tree):
     # print(codegen.to_source(func_tree))
 
 
+NAMED_CONSTS = {'None': None, 'True': True, 'False': False}
+
 def destruct_to_tests_and_assigns(topic, pattern):
     if isinstance(pattern, (Num, Str)):
         return [make_eq(topic, pattern)], []
     elif isinstance(pattern, Name):
-        return [], [make_assign(pattern.id, topic)]
+        if pattern.id in NAMED_CONSTS:
+            return [make_op(Is, topic, pattern)], []
+        else:
+            return [], [make_assign(pattern.id, topic)]
     elif isinstance(pattern, NameConstant):
         return [make_op(Is, topic, pattern)], []
     elif isinstance(pattern, Compare) and len(pattern.ops) == 1 and isinstance(pattern.ops[0], Is):
