@@ -1,9 +1,12 @@
 language: python
-python:
-  - "2.7"
-  - "3.3"
-  - "3.4"
-  - "pypy"
+python: 2.7
+env:
+  - TOXENV=py27
+  - TOXENV=py33
+  - TOXENV=py34
+  - TOXENV=pypy
+  - TOXENV=flakes
 install:
-  - pip install codegen
-script: py.test
+  - pip install tox
+script:
+  - tox
