@@ -16,7 +16,7 @@ def V(value):
         raise TypeError("Don't know how to make AST value from %s" % repr(value))
 
 def N(id):
-  return Name(ctx=Load(), id=id)
+    return Name(ctx=Load(), id=id)
 
 if PY3:
     def A(id):

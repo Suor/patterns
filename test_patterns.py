@@ -158,12 +158,12 @@ def test_tail_destruct():
 
     assert tail_destruct([]) == 0
     assert tail_destruct([7]) == 1
-    assert tail_destruct([1,2,3]) == 3
+    assert tail_destruct([1, 2, 3]) == 3
 
     assert tail_destruct(()) == ''
     assert tail_destruct((1,)) == 't'
-    assert tail_destruct((1,2,3)) == 'ttt'
-    assert tail_destruct((1,'X',2)) == 'tXt'
+    assert tail_destruct((1, 2, 3)) == 'ttt'
+    assert tail_destruct((1, 'X', 2)) == 'tXt'
 
 
 def test_nested_capture():
@@ -191,6 +191,7 @@ def test_wrong_pattern():
 
 def test_exception():
     import sys, inspect
+
     class E(Exception): pass
 
     BASE_LINE = inspect.currentframe().f_lineno
@@ -201,7 +202,8 @@ def test_exception():
         if 2:
             raise E
 
-    for value, exc, line in [(1, E, BASE_LINE+4), (2, E, BASE_LINE+6), (3, Mismatch, BASE_LINE+7)]:
+    TESTS = [(1, E, BASE_LINE + 4), (2, E, BASE_LINE + 6), (3, Mismatch, BASE_LINE + 7)]
+    for value, exc, line in TESTS:
         try:
             exception(value)
         except exc:

@@ -34,8 +34,8 @@ def transform_function(func_tree):
             test.body = assigns + test.body
 
         else:
-            raise TypeError("Don't know how to match %s" \
-                % (codegen.to_source(cond).strip() or cond))
+            raise TypeError("Don't know how to match %s"
+                            % (codegen.to_source(cond).strip() or cond))
 
     func_tree.body = lmap(wrap_tail_expr, func_tree.body)
     func_tree.body.append(make_raise(N('Mismatch')))
@@ -77,22 +77,27 @@ def destruct_to_tests_and_assigns(topic, pattern):
             make_op(GtE, make_call('len', topic), len(pattern.left.elts)),
         ]
         coll_assigns = [
-            make_assign(pattern.right.id,
-                        Subscript(ctx=Load(),
-                                  value=topic,
-                                  slice=Slice(lower=V(len(pattern.left.elts)), upper=None, step=None)))
+            make_assign(
+                pattern.right.id,
+                Subscript(
+                    ctx   = Load(),
+                    value = topic,
+                    slice = Slice(lower=V(len(pattern.left.elts)), upper=None, step=None)
+                )
+            )
         ]
         tests, assigns = subscript_tests_and_assigns(topic, pattern.left)
         return coll_tests + tests, assigns + coll_assigns
     else:
-        raise TypeError("Don't know how to match %s" \
-            % (codegen.to_source(pattern).strip() or pattern))
+        raise TypeError("Don't know how to match %s"
+                        % (codegen.to_source(pattern).strip() or pattern))
 
 
 def subscript_tests_and_assigns(topic, pattern):
     tests = []
     assigns = []
-    items = enumerate(pattern.elts) if hasattr(pattern, 'elts') else zip(pattern.keys, pattern.values)
+    items = enumerate(pattern.elts) if hasattr(pattern, 'elts') else \
+            zip(pattern.keys, pattern.values)
     for key, elt in items:
         t, a = destruct_to_tests_and_assigns(make_subscript(topic, key), elt)
         tests.extend(t)
