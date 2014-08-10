@@ -49,7 +49,10 @@ def transform_function(func_tree):
 
 NAMED_CONSTS = {'None': None, 'True': True, 'False': False}
 
-def destruct_to_tests_and_assigns(topic, pattern):
+def destruct_to_tests_and_assigns(topic, pattern, names=None):
+    if names is None:
+        names = {}
+
     if isinstance(pattern, (Num, Str)):
         return [make_eq(topic, pattern)], []
     elif isinstance(pattern, Name):
@@ -58,22 +61,24 @@ def destruct_to_tests_and_assigns(topic, pattern):
         elif pattern.id == '_':
             return [], []
         else:
-            return [], [make_assign(pattern.id, topic)]
+            if pattern.id in names:
+                return [make_eq(topic, names[pattern.id])], []
+            else:
+                names[pattern.id] = topic
+                return [], [make_assign(pattern.id, topic)]
     elif isinstance(pattern, NameConstant):
         return [make_op(Is, topic, pattern)], []
     elif isinstance(pattern, Compare) and len(pattern.ops) == 1 and isinstance(pattern.ops[0], Is):
+        left_tests, left_assigns = destruct_to_tests_and_assigns(topic, pattern.left, names)
         test = make_call('isinstance', topic, pattern.comparators[0])
-        if pattern.left.id == '_':
-            return [test], []
-        else:
-            return [test], [make_assign(pattern.left.id, topic)]
+        return left_tests + [test], left_assigns
     elif isinstance(pattern, (List, Tuple, Dict)):
         elts = getattr(pattern, 'elts', []) or getattr(pattern, 'values', [])
         coll_tests = [
             make_call('isinstance', topic, N(pattern.__class__.__name__.lower())),
             make_eq(make_call('len', topic), len(elts))
         ]
-        tests, assigns = subscript_tests_and_assigns(topic, pattern)
+        tests, assigns = subscript_tests_and_assigns(topic, pattern, names)
         return coll_tests + tests, assigns
     elif isinstance(pattern, BinOp) and isinstance(pattern.op, Add) \
          and isinstance(pattern.left, (List, Tuple)) and isinstance(pattern.right, Name):
@@ -91,20 +96,20 @@ def destruct_to_tests_and_assigns(topic, pattern):
                 )
             )
         ]
-        tests, assigns = subscript_tests_and_assigns(topic, pattern.left)
+        tests, assigns = subscript_tests_and_assigns(topic, pattern.left, names)
         return coll_tests + tests, assigns + coll_assigns
     else:
         raise TypeError("Don't know how to match %s"
                         % (codegen.to_source(pattern).strip() or pattern))
 
 
-def subscript_tests_and_assigns(topic, pattern):
+def subscript_tests_and_assigns(topic, pattern, names):
     tests = []
     assigns = []
     items = enumerate(pattern.elts) if hasattr(pattern, 'elts') else \
             zip(pattern.keys, pattern.values)
     for key, elt in items:
-        t, a = destruct_to_tests_and_assigns(make_subscript(topic, key), elt)
+        t, a = destruct_to_tests_and_assigns(make_subscript(topic, key), elt, names)
         tests.extend(t)
         assigns.extend(a)
     return tests, assigns

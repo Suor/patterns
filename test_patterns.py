@@ -198,6 +198,21 @@ def test_wildcard():
     assert capture('hey') == 'wildcard XXX'
 
 
+def test_same_names():
+    @patterns
+    def capture():
+        if [x is str, x]: 'str %s' % x
+        if [x, x]: 'double %s' % x
+        if [x, {'v': x}]: 'nested %s' % x
+        if [x, y]: '%s and %s' % (x, y)
+
+    assert capture([3, 3]) == 'double 3'
+    assert capture([1, 2]) == '1 and 2'
+    assert capture(['x', 'x']) == 'str x'
+    assert capture(['x', 'y']) == 'x and y'
+    assert capture([4, {'v': 4}]) == 'nested 4'
+
+
 def test_wrong_pattern():
     def wrong():
         @patterns
