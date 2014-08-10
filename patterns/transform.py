@@ -55,13 +55,18 @@ def destruct_to_tests_and_assigns(topic, pattern):
     elif isinstance(pattern, Name):
         if pattern.id in NAMED_CONSTS:
             return [make_op(Is, topic, pattern)], []
+        elif pattern.id == '_':
+            return [], []
         else:
             return [], [make_assign(pattern.id, topic)]
     elif isinstance(pattern, NameConstant):
         return [make_op(Is, topic, pattern)], []
     elif isinstance(pattern, Compare) and len(pattern.ops) == 1 and isinstance(pattern.ops[0], Is):
-        return [make_call('isinstance', topic, pattern.comparators[0])], \
-               [make_assign(pattern.left.id, topic)]
+        test = make_call('isinstance', topic, pattern.comparators[0])
+        if pattern.left.id == '_':
+            return [test], []
+        else:
+            return [test], [make_assign(pattern.left.id, topic)]
     elif isinstance(pattern, (List, Tuple, Dict)):
         elts = getattr(pattern, 'elts', []) or getattr(pattern, 'values', [])
         coll_tests = [

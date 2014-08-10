@@ -41,7 +41,6 @@ TODO
 ----
 
 - docs
-- matching to ``_`` should not capture
 - name parameter
 - better handling of ``Mismatch`` passing to function env
 - non-strict dict matching

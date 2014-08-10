@@ -180,6 +180,22 @@ def test_nested_capture():
     assert answer({'key': 'alice'}) == 'dict: alice'
 
 
+def test_wildcard():
+    _ = 'XXX'
+
+    @patterns
+    def capture():
+        if _ is int: 'int ' + _
+        if [_ is int]: 'intlist ' + _
+        if [_]: 'list ' + _
+        if _: 'wildcard ' + _
+
+    assert capture(42) == 'int XXX'
+    assert capture([42]) == 'intlist XXX'
+    assert capture(['hey']) == 'list XXX'
+    assert capture('hey') == 'wildcard XXX'
+
+
 def test_wrong_pattern():
     def wrong():
         @patterns

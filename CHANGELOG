@@ -1,4 +1,5 @@
 - pypy support
+- matching to _ doesn't capture anymore
 - handle None, True, False right
 
 0.2
