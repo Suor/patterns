@@ -41,6 +41,8 @@ TODO
 ----
 
 - docs
+- aliases for structures
+- destructure objects
 - name parameter
 - better handling of ``Mismatch`` passing to function env
 - non-strict dict matching
