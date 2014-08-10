@@ -188,11 +188,13 @@ def test_wildcard():
         if _ is int: 'int ' + _
         if [_ is int]: 'intlist ' + _
         if [_]: 'list ' + _
+        if [_, _]: '2list ' + _
         if _: 'wildcard ' + _
 
     assert capture(42) == 'int XXX'
     assert capture([42]) == 'intlist XXX'
     assert capture(['hey']) == 'list XXX'
+    assert capture([42, 42]) == '2list XXX'
     assert capture('hey') == 'wildcard XXX'
 
 
