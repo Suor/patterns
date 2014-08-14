@@ -5,6 +5,7 @@ env:
   - TOXENV=py33
   - TOXENV=py34
   - TOXENV=pypy
+  - TOXENV=pypy3
   - TOXENV=flakes
 install:
   - pip install tox
